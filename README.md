@@ -47,6 +47,12 @@ SMTP_PORT=587
 SMTP_USER=your-email@gmail.com
 SMTP_PASSWORD=your-gmail-app-password  # Create at https://myaccount.google.com/apppasswords
 NOTIFY_EMAIL=your-email@gmail.com
+
+# Required for credits monitor (Anthropic balance checking)
+ANTHROPIC_CONSOLE_EMAIL=your-console-email@example.com
+IMAP_HOST=imap.gmail.com
+IMAP_USER=your-email@gmail.com
+IMAP_PASSWORD=your-gmail-app-password  # Same as SMTP or separate app password
 ```
 
 ## Quick Start
@@ -112,11 +118,29 @@ notifyme add \
   --condition "Product is available for purchase with a buy button"
 ```
 
+### Credits Monitor (Anthropic Balance)
+Monitors your Anthropic Console credit balance and alerts when it falls below a threshold.
+
+```bash
+notifyme add \
+  --name "Anthropic Credits" \
+  --type credits \
+  --threshold 5.00 \
+  --interval 1440  # Check daily
+```
+
+**Requirements:**
+- Set `ANTHROPIC_CONSOLE_EMAIL` in `.env` (your Anthropic console email)
+- Set `IMAP_HOST`, `IMAP_USER`, `IMAP_PASSWORD` in `.env` for email access
+- Uses magic link authentication (retrieves login link from email automatically)
+- Automatically archives magic link emails after use
+
 ### Options
 
 | Flag | Description |
 |------|-------------|
 | `--interval N` | Check every N minutes (default: 1440 = daily) |
+| `--threshold N` | For credits/price monitors: alert threshold |
 | `--notify-on-each` | Notify on each new match, not just first time |
 | `--filter "..."` | Agentic filter for news monitors |
 | `--first-match` | Stop checking after first matching article |
@@ -167,6 +191,7 @@ tail -f ~/.notifyme/scheduler.log
 | News (no filter) | Free |
 | News + filter (Haiku) | ~$0.0002 per article |
 | Agentic (Sonnet) | ~$0.003 per check |
+| Credits (balance check) | Free (no API calls) |
 
 Example: 5 monitors checking daily ≈ $1-2/month
 
@@ -212,6 +237,16 @@ notifyme add \
   --condition "Product is available and can be added to cart" \
   --browser-agent \
   --browser-task "Scroll down to see the full product details"
+```
+
+### Anthropic Credits Balance
+Monitor your Anthropic API credit balance:
+```bash
+notifyme add \
+  --name "Anthropic Credits Low" \
+  --type credits \
+  --threshold 5.00 \
+  --interval 1440  # Check daily
 ```
 
 ## Data Storage

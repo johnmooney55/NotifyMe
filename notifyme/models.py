@@ -15,6 +15,7 @@ class MonitorType(str, Enum):
     API = "api"
     AGENTIC = "agentic"
     NEWS = "news"
+    CREDITS = "credits"
 
 
 @dataclass

@@ -4,7 +4,7 @@ import logging
 from datetime import datetime
 from typing import Callable
 
-from .checkers import AgenticChecker, NewsChecker, PriceChecker, WebpageChecker
+from .checkers import AgenticChecker, CreditsChecker, NewsChecker, PriceChecker, WebpageChecker
 from .checkers.base import BaseChecker
 from .database import Database
 from .models import CheckResult, Monitor, MonitorType
@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 # Map monitor types to checker classes
 CHECKER_MAP: dict[MonitorType, type[BaseChecker]] = {
     MonitorType.AGENTIC: AgenticChecker,
+    MonitorType.CREDITS: CreditsChecker,
     MonitorType.NEWS: NewsChecker,
     MonitorType.WEBPAGE: WebpageChecker,
     MonitorType.PRICE: PriceChecker,

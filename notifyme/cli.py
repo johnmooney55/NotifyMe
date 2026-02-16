@@ -43,10 +43,10 @@ def cli(ctx: click.Context, db_path: str | None, verbose: bool) -> None:
 @click.option(
     "--type", "-t", "monitor_type",
     required=True,
-    type=click.Choice(["agentic", "news", "webpage", "price", "rss", "api"]),
+    type=click.Choice(["agentic", "news", "webpage", "price", "rss", "api", "credits"]),
     help="Monitor type",
 )
-@click.option("--url", "-u", required=True, help="URL to monitor")
+@click.option("--url", "-u", required=False, help="URL to monitor (not required for credits type)")
 @click.option("--condition", "-c", help="Condition for agentic monitors")
 @click.option("--interval", "-i", default=1440, help="Check interval in minutes (default: 1440 = daily)")
 @click.option("--selector", "-s", help="CSS selector for price/webpage monitors")
@@ -64,7 +64,7 @@ def add(
     ctx: click.Context,
     name: str,
     monitor_type: str,
-    url: str,
+    url: str | None,
     condition: str | None,
     interval: int,
     selector: str | None,
@@ -93,6 +93,15 @@ def add(
         if threshold is None:
             raise click.ClickException("Price monitors require --threshold")
 
+    if mtype == MonitorType.CREDITS:
+        # Credits monitors don't need a URL, use a placeholder
+        url = url or "https://console.anthropic.com/settings/billing"
+        # Default threshold to $1.00 if not specified
+        if threshold is None:
+            threshold = 1.00
+    elif not url:
+        raise click.ClickException(f"{monitor_type} monitors require --url")
+
     # Build config
     config = {}
     if selector:
@@ -114,6 +123,11 @@ def add(
         config["browser_headed"] = not headless  # Default True (headed)
     if browser_task:
         config["browser_task"] = browser_task
+
+    # Credits monitor specific: archive emails by default, run headless
+    if mtype == MonitorType.CREDITS:
+        config["archive_emails"] = True
+        config["headed"] = False  # Run headless for background checks
 
     # Create monitor
     monitor = Monitor(
