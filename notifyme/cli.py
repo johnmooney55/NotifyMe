@@ -53,6 +53,7 @@ def cli(ctx: click.Context, db_path: str | None, verbose: bool) -> None:
 @click.option("--threshold", type=float, help="Price threshold for price monitors")
 @click.option("--playwright", is_flag=True, help="Use Playwright for JS-rendered pages")
 @click.option("--notify-on-each", is_flag=True, help="Notify on each new match (for recurring events like sports wins)")
+@click.option("--filter", "filter_condition", help="Agentic filter for news monitors (e.g., 'article announces product is available')")
 @click.pass_context
 def add(
     ctx: click.Context,
@@ -65,6 +66,7 @@ def add(
     threshold: float | None,
     playwright: bool,
     notify_on_each: bool,
+    filter_condition: str | None,
 ) -> None:
     """Add a new monitor."""
     db: Database = ctx.obj["db"]
@@ -91,6 +93,8 @@ def add(
         config["use_playwright"] = True
     if notify_on_each:
         config["notify_on_each"] = True
+    if filter_condition:
+        config["filter_condition"] = filter_condition
 
     # Create monitor
     monitor = Monitor(

@@ -1,10 +1,14 @@
 """News/RSS checker for Google Alerts replacement."""
 
 import hashlib
+import json
 import logging
+import os
 from typing import Any
 
-from ..fetcher import fetch_rss
+from anthropic import Anthropic
+
+from ..fetcher import fetch_rss, fetch_url
 from ..models import CheckResult, Monitor
 from .base import BaseChecker
 
@@ -12,7 +16,23 @@ logger = logging.getLogger(__name__)
 
 
 class NewsChecker(BaseChecker):
-    """Checker for news feeds and Google News RSS."""
+    """Checker for news feeds and Google News RSS.
+
+    Config options:
+        - filter_condition: If set, uses Claude to filter articles that match
+                           this condition. Only matching articles trigger notifications.
+                           Example: "The article announces the product is available for purchase"
+    """
+
+    def __init__(self):
+        self._client = None
+
+    @property
+    def client(self):
+        """Lazy-load Anthropic client only when needed for filtering."""
+        if self._client is None:
+            self._client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+        return self._client
 
     def check(self, monitor: Monitor) -> CheckResult:
         """
@@ -47,6 +67,11 @@ class NewsChecker(BaseChecker):
                     "summary": entry.get("summary", "")[:500],
                 })
 
+        # Apply agentic filter if configured
+        filter_condition = monitor.config.get("filter_condition")
+        if filter_condition and new_articles:
+            new_articles = self._filter_articles(new_articles, filter_condition)
+
         # Build result
         has_new = len(new_articles) > 0
         explanation = (
@@ -62,6 +87,80 @@ class NewsChecker(BaseChecker):
             new_items=new_articles,
             state_hash=hashlib.sha256(",".join(all_ids).encode()).hexdigest()[:16],
         )
+
+    def _filter_articles(
+        self, articles: list[dict], condition: str
+    ) -> list[dict]:
+        """Filter articles using Claude to check if they match the condition."""
+        filtered = []
+
+        for article in articles:
+            try:
+                # Try to fetch full article content
+                content = article.get("summary", "")
+                if article.get("link"):
+                    try:
+                        result = fetch_url(article["link"], timeout=15)
+                        content = result.text[:10000]  # Limit content size
+                    except Exception as e:
+                        logger.debug(f"Could not fetch article: {e}")
+                        # Fall back to title + summary
+                        content = f"Title: {article.get('title', '')}\n\nSummary: {article.get('summary', '')}"
+
+                # Ask Claude if article matches condition
+                if self._article_matches_condition(article, content, condition):
+                    filtered.append(article)
+
+            except Exception as e:
+                logger.warning(f"Error filtering article: {e}")
+                # On error, include the article to avoid missing things
+                filtered.append(article)
+
+        logger.info(f"Agentic filter: {len(filtered)}/{len(articles)} articles matched condition")
+        return filtered
+
+    def _article_matches_condition(
+        self, article: dict, content: str, condition: str
+    ) -> bool:
+        """Use Claude to determine if article matches the filter condition."""
+        prompt = f"""Does this article match the following condition?
+
+CONDITION: {condition}
+
+ARTICLE TITLE: {article.get('title', 'Unknown')}
+SOURCE: {article.get('source', 'Unknown')}
+
+ARTICLE CONTENT:
+{content[:8000]}
+
+Answer with JSON only: {{"matches": true or false, "reason": "brief explanation"}}"""
+
+        try:
+            response = self.client.messages.create(
+                model="claude-3-haiku-20240307",  # Use Haiku for filtering (cheaper)
+                max_tokens=100,
+                messages=[{"role": "user", "content": prompt}],
+            )
+
+            response_text = response.content[0].text.strip()
+
+            # Parse response
+            if response_text.startswith("```"):
+                response_text = response_text.split("```")[1]
+                if response_text.startswith("json"):
+                    response_text = response_text[4:]
+                response_text = response_text.strip()
+
+            result = json.loads(response_text)
+            matches = result.get("matches", False)
+            reason = result.get("reason", "")
+
+            logger.debug(f"Article '{article.get('title', '')[:50]}' matches={matches}: {reason}")
+            return matches
+
+        except Exception as e:
+            logger.warning(f"Error checking article with Claude: {e}")
+            return True  # On error, include article to be safe
 
     def should_notify(self, monitor: Monitor, result: CheckResult) -> bool:
         """Notify whenever there are new articles."""
