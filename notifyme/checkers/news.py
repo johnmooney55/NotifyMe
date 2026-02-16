@@ -70,7 +70,8 @@ class NewsChecker(BaseChecker):
         # Apply agentic filter if configured
         filter_condition = monitor.config.get("filter_condition")
         if filter_condition and new_articles:
-            new_articles = self._filter_articles(new_articles, filter_condition)
+            stop_on_first = monitor.config.get("stop_on_first_match", False)
+            new_articles = self._filter_articles(new_articles, filter_condition, stop_on_first)
 
         # Build result
         has_new = len(new_articles) > 0
@@ -89,12 +90,14 @@ class NewsChecker(BaseChecker):
         )
 
     def _filter_articles(
-        self, articles: list[dict], condition: str
+        self, articles: list[dict], condition: str, stop_on_first: bool = False
     ) -> list[dict]:
         """Filter articles using Claude to check if they match the condition."""
         filtered = []
+        checked = 0
 
         for article in articles:
+            checked += 1
             try:
                 # Try to fetch full article content
                 content = article.get("summary", "")
@@ -110,11 +113,16 @@ class NewsChecker(BaseChecker):
                 # Ask Claude if article matches condition
                 if self._article_matches_condition(article, content, condition):
                     filtered.append(article)
+                    if stop_on_first:
+                        logger.info(f"Agentic filter: found match after checking {checked} articles (stop_on_first=True)")
+                        return filtered
 
             except Exception as e:
                 logger.warning(f"Error filtering article: {e}")
                 # On error, include the article to avoid missing things
                 filtered.append(article)
+                if stop_on_first:
+                    return filtered
 
         logger.info(f"Agentic filter: {len(filtered)}/{len(articles)} articles matched condition")
         return filtered

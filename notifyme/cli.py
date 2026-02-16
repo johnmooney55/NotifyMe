@@ -54,6 +54,7 @@ def cli(ctx: click.Context, db_path: str | None, verbose: bool) -> None:
 @click.option("--playwright", is_flag=True, help="Use Playwright for JS-rendered pages")
 @click.option("--notify-on-each", is_flag=True, help="Notify on each new match (for recurring events like sports wins)")
 @click.option("--filter", "filter_condition", help="Agentic filter for news monitors (e.g., 'article announces product is available')")
+@click.option("--first-match", is_flag=True, help="Stop checking after first matching article (saves API costs for announcements)")
 @click.pass_context
 def add(
     ctx: click.Context,
@@ -67,6 +68,7 @@ def add(
     playwright: bool,
     notify_on_each: bool,
     filter_condition: str | None,
+    first_match: bool,
 ) -> None:
     """Add a new monitor."""
     db: Database = ctx.obj["db"]
@@ -95,6 +97,8 @@ def add(
         config["notify_on_each"] = True
     if filter_condition:
         config["filter_condition"] = filter_condition
+    if first_match:
+        config["stop_on_first_match"] = True
 
     # Create monitor
     monitor = Monitor(
