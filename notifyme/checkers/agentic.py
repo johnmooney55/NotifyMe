@@ -135,28 +135,22 @@ class AgenticChecker(BaseChecker):
         Returns:
             Dictionary with condition_met, explanation, relevant_details
         """
-        prompt = f"""Analyze this webpage content and determine if the following condition is met.
+        prompt = f"""Analyze this webpage and determine if the condition is TRUE or FALSE.
 
-CONDITION TO CHECK:
-{condition}
-
-URL: {url}
+CONDITION: {condition}
 
 WEBPAGE CONTENT:
 {content}
 
-Respond with valid JSON only (no markdown, no explanation outside JSON):
-{{
-    "condition_met": true or false,
-    "explanation": "Brief explanation of your determination",
-    "relevant_details": "Any useful information like price, availability date, purchase links, etc.",
-    "event_id": "A unique identifier for this specific event (e.g., game date + opponent, product SKU, article title). This helps track which specific event triggered the condition."
-}}"""
+IMPORTANT: Set "condition_met" to true ONLY if the condition is satisfied. If the condition is NOT met, set it to false.
+
+Respond with JSON only:
+{{"condition_met": true or false, "explanation": "why condition is met or not met", "relevant_details": "key info like scores, dates, prices", "event_id": "unique identifier like game date + opponent"}}"""
 
         try:
             response = self.client.messages.create(
                 model="claude-sonnet-4-20250514",
-                max_tokens=500,
+                max_tokens=300,
                 messages=[{"role": "user", "content": prompt}],
             )
 
