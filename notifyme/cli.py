@@ -56,6 +56,9 @@ def cli(ctx: click.Context, db_path: str | None, verbose: bool) -> None:
 @click.option("--filter", "filter_condition", help="Agentic filter for news monitors (e.g., 'article announces product is available')")
 @click.option("--first-match", is_flag=True, help="Stop checking after first matching article (saves API costs for announcements)")
 @click.option("--max-age", "max_age_days", type=int, help="For news monitors: ignore articles older than N days (prevents old articles on first run)")
+@click.option("--browser-agent", is_flag=True, help="Use AI-controlled browser for anti-bot evasion (headed by default)")
+@click.option("--browser-task", help="Task for browser agent (e.g., 'scroll to find the price')")
+@click.option("--headless", is_flag=True, help="Run browser-agent in headless mode (less effective against bot detection)")
 @click.pass_context
 def add(
     ctx: click.Context,
@@ -71,6 +74,9 @@ def add(
     filter_condition: str | None,
     first_match: bool,
     max_age_days: int | None,
+    browser_agent: bool,
+    browser_task: str | None,
+    headless: bool,
 ) -> None:
     """Add a new monitor."""
     db: Database = ctx.obj["db"]
@@ -103,6 +109,11 @@ def add(
         config["stop_on_first_match"] = True
     if max_age_days:
         config["max_age_days"] = max_age_days
+    if browser_agent:
+        config["use_browser_agent"] = True
+        config["browser_headed"] = not headless  # Default True (headed)
+    if browser_task:
+        config["browser_task"] = browser_task
 
     # Create monitor
     monitor = Monitor(

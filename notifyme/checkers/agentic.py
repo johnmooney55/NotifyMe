@@ -20,6 +20,9 @@ class AgenticChecker(BaseChecker):
 
     Config options:
         - use_playwright: Use Playwright for JS-rendered pages
+        - use_browser_agent: Use Browser-Use AI agent for anti-bot evasion
+        - browser_task: Optional task for Browser-Use (e.g., "scroll to find price")
+        - browser_headed: Run browser in headed mode (default True)
         - max_content_chars: Max chars to send to Claude (default 50000)
         - notify_on_each: If True, notify on each new match (tracks event_id)
                          Use for recurring events like sports wins
@@ -43,7 +46,17 @@ class AgenticChecker(BaseChecker):
 
         # Fetch the page content
         use_playwright = monitor.config.get("use_playwright", False)
-        result = fetch_url(monitor.url, use_playwright=use_playwright)
+        use_browser_agent = monitor.config.get("use_browser_agent", False)
+        browser_task = monitor.config.get("browser_task")
+        browser_headed = monitor.config.get("browser_headed", True)
+
+        result = fetch_url(
+            monitor.url,
+            use_playwright=use_playwright,
+            use_browser_agent=use_browser_agent,
+            browser_task=browser_task,
+            browser_headed=browser_headed,
+        )
 
         # Truncate content if too long (Claude has context limits)
         content = result.text

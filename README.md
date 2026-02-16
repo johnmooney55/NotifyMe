@@ -27,6 +27,9 @@ pip install -e .
 # Optional: Install Playwright for JS-rendered pages
 pip install playwright && playwright install chromium
 
+# Optional: Install Browser-Use for AI-controlled browser (anti-bot evasion)
+pip install 'notifyme[browser-agent]'
+
 # Copy and configure environment
 cp .env.example .env
 # Edit .env with your API keys
@@ -119,6 +122,9 @@ notifyme add \
 | `--first-match` | Stop checking after first matching article |
 | `--max-age N` | Ignore articles older than N days (prevents old articles on first run) |
 | `--playwright` | Use headless browser for JS-rendered pages |
+| `--browser-agent` | Use AI-controlled browser for anti-bot evasion (headed by default) |
+| `--browser-task "..."` | Task for browser agent (e.g., "scroll to find the price") |
+| `--headless` | Run browser-agent in headless mode |
 
 ## CLI Commands
 
@@ -194,6 +200,18 @@ notifyme add \
   --type news \
   --url "https://news.google.com/rss/search?q=Anthropic" \
   --filter "Article is specifically about Anthropic the AI company, not generic AI news"
+```
+
+### Anti-Bot Sites (Browser Agent)
+For sites that block automated requests, use the AI-controlled browser:
+```bash
+notifyme add \
+  --name "Product In Stock" \
+  --type agentic \
+  --url "https://example.com/product" \
+  --condition "Product is available and can be added to cart" \
+  --browser-agent \
+  --browser-task "Scroll down to see the full product details"
 ```
 
 ## Data Storage
