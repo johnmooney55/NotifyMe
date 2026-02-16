@@ -4,6 +4,8 @@ import hashlib
 import json
 import logging
 import os
+from datetime import datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
 from typing import Any
 
 from anthropic import Anthropic
@@ -22,6 +24,8 @@ class NewsChecker(BaseChecker):
         - filter_condition: If set, uses Claude to filter articles that match
                            this condition. Only matching articles trigger notifications.
                            Example: "The article announces the product is available for purchase"
+        - max_age_days: If set, ignore articles older than this many days.
+                       Useful for first run to avoid old articles triggering.
     """
 
     def __init__(self):
@@ -66,6 +70,15 @@ class NewsChecker(BaseChecker):
                     "source": self._get_source(entry),
                     "summary": entry.get("summary", "")[:500],
                 })
+
+        # Filter by max age if configured (prevents old articles on first run)
+        max_age_days = monitor.config.get("max_age_days")
+        if max_age_days and new_articles:
+            before_count = len(new_articles)
+            new_articles = [a for a in new_articles if self._is_article_recent(a, max_age_days)]
+            filtered_count = before_count - len(new_articles)
+            if filtered_count > 0:
+                logger.info(f"Age filter: excluded {filtered_count} articles older than {max_age_days} days")
 
         # Apply agentic filter if configured
         filter_condition = monitor.config.get("filter_condition")
@@ -212,3 +225,20 @@ Answer with JSON only: {{"matches": true or false, "reason": "brief explanation"
             return source.get("title", "Unknown")
 
         return "Unknown"
+
+    def _is_article_recent(self, article: dict, max_age_days: int) -> bool:
+        """Check if article is within the max age threshold."""
+        published = article.get("published", "")
+        if not published:
+            # No date available, include it to be safe
+            return True
+
+        try:
+            # Parse RFC 2822 date format (common in RSS)
+            pub_date = parsedate_to_datetime(published)
+            cutoff = datetime.now(timezone.utc) - timedelta(days=max_age_days)
+            return pub_date >= cutoff
+        except Exception as e:
+            logger.debug(f"Could not parse article date '{published}': {e}")
+            # On parse error, include the article
+            return True

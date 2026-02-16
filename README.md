@@ -94,7 +94,8 @@ notifyme add \
   --type news \
   --url "https://news.google.com/rss/search?q=MacBook+Air+announced" \
   --filter "Apple has OFFICIALLY announced a NEW MacBook Air. Not rumors or speculation." \
-  --first-match  # Stop after first match (saves API costs)
+  --first-match \  # Stop after first match (saves API costs)
+  --max-age 7      # Only consider articles from last 7 days
 ```
 
 ### Agentic Monitor (Direct)
@@ -116,6 +117,7 @@ notifyme add \
 | `--notify-on-each` | Notify on each new match, not just first time |
 | `--filter "..."` | Agentic filter for news monitors |
 | `--first-match` | Stop checking after first matching article |
+| `--max-age N` | Ignore articles older than N days (prevents old articles on first run) |
 | `--playwright` | Use headless browser for JS-rendered pages |
 
 ## CLI Commands

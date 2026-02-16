@@ -55,6 +55,7 @@ def cli(ctx: click.Context, db_path: str | None, verbose: bool) -> None:
 @click.option("--notify-on-each", is_flag=True, help="Notify on each new match (for recurring events like sports wins)")
 @click.option("--filter", "filter_condition", help="Agentic filter for news monitors (e.g., 'article announces product is available')")
 @click.option("--first-match", is_flag=True, help="Stop checking after first matching article (saves API costs for announcements)")
+@click.option("--max-age", "max_age_days", type=int, help="For news monitors: ignore articles older than N days (prevents old articles on first run)")
 @click.pass_context
 def add(
     ctx: click.Context,
@@ -69,6 +70,7 @@ def add(
     notify_on_each: bool,
     filter_condition: str | None,
     first_match: bool,
+    max_age_days: int | None,
 ) -> None:
     """Add a new monitor."""
     db: Database = ctx.obj["db"]
@@ -99,6 +101,8 @@ def add(
         config["filter_condition"] = filter_condition
     if first_match:
         config["stop_on_first_match"] = True
+    if max_age_days:
+        config["max_age_days"] = max_age_days
 
     # Create monitor
     monitor = Monitor(
