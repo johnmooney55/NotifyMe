@@ -48,7 +48,7 @@ def cli(ctx: click.Context, db_path: str | None, verbose: bool) -> None:
 )
 @click.option("--url", "-u", required=True, help="URL to monitor")
 @click.option("--condition", "-c", help="Condition for agentic monitors")
-@click.option("--interval", "-i", default=60, help="Check interval in minutes (default: 60)")
+@click.option("--interval", "-i", default=1440, help="Check interval in minutes (default: 1440 = daily)")
 @click.option("--selector", "-s", help="CSS selector for price/webpage monitors")
 @click.option("--threshold", type=float, help="Price threshold for price monitors")
 @click.option("--playwright", is_flag=True, help="Use Playwright for JS-rendered pages")
