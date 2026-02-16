@@ -1,8 +1,10 @@
 """Agentic checker using Claude to evaluate complex conditions."""
 
+import hashlib
 import json
 import logging
 import os
+from typing import Any
 
 from anthropic import Anthropic
 
@@ -14,7 +16,14 @@ logger = logging.getLogger(__name__)
 
 
 class AgenticChecker(BaseChecker):
-    """Checker that uses Claude to evaluate natural language conditions."""
+    """Checker that uses Claude to evaluate natural language conditions.
+
+    Config options:
+        - use_playwright: Use Playwright for JS-rendered pages
+        - max_content_chars: Max chars to send to Claude (default 50000)
+        - notify_on_each: If True, notify on each new match (tracks event_id)
+                         Use for recurring events like sports wins
+    """
 
     def __init__(self, api_key: str | None = None):
         self.client = Anthropic(api_key=api_key or os.getenv("ANTHROPIC_API_KEY"))
@@ -50,12 +59,67 @@ class AgenticChecker(BaseChecker):
         if isinstance(relevant_details, str):
             relevant_details = {"info": relevant_details} if relevant_details else {}
 
+        # Include event_id in details for tracking
+        event_id = evaluation.get("event_id", "")
+        if event_id:
+            relevant_details["event_id"] = event_id
+
         return CheckResult(
             condition_met=evaluation.get("condition_met", False),
             explanation=evaluation.get("explanation", "No explanation provided"),
             details=relevant_details,
             state_hash=result.content_hash,
         )
+
+    def should_notify(self, monitor: Monitor, result: CheckResult) -> bool:
+        """
+        Determine if notification should be sent.
+
+        If notify_on_each is enabled, notify on each new event (different event_id).
+        Otherwise, use default behavior (notify on transition from false to true).
+        """
+        if not result.condition_met:
+            return False
+
+        notify_on_each = monitor.config.get("notify_on_each", False)
+
+        if notify_on_each:
+            # Notify if this is a different event than last notified
+            current_event_id = result.details.get("event_id", "")
+            last_event_id = monitor.last_state.get("last_notified_event_id", "")
+
+            if current_event_id and current_event_id != last_event_id:
+                return True
+            elif not current_event_id:
+                # No event_id, fall back to checking if explanation changed
+                current_hash = hashlib.sha256(result.explanation.encode()).hexdigest()[:16]
+                last_hash = monitor.last_state.get("last_explanation_hash", "")
+                return current_hash != last_hash
+
+            return False
+        else:
+            # Default: notify on transition from false to true
+            previous_met = monitor.last_state.get("condition_met", False)
+            return not previous_met
+
+    def get_state_for_storage(self, result: CheckResult) -> dict[str, Any]:
+        """Store state including event tracking for notify_on_each mode."""
+        state = {
+            "condition_met": result.condition_met,
+            "explanation": result.explanation,
+            "details": result.details,
+        }
+
+        # Track event_id for notify_on_each mode
+        if result.condition_met:
+            event_id = result.details.get("event_id", "")
+            if event_id:
+                state["last_notified_event_id"] = event_id
+            state["last_explanation_hash"] = hashlib.sha256(
+                result.explanation.encode()
+            ).hexdigest()[:16]
+
+        return state
 
     def _evaluate_with_claude(
         self, content: str, condition: str, url: str
@@ -85,7 +149,8 @@ Respond with valid JSON only (no markdown, no explanation outside JSON):
 {{
     "condition_met": true or false,
     "explanation": "Brief explanation of your determination",
-    "relevant_details": "Any useful information like price, availability date, purchase links, etc."
+    "relevant_details": "Any useful information like price, availability date, purchase links, etc.",
+    "event_id": "A unique identifier for this specific event (e.g., game date + opponent, product SKU, article title). This helps track which specific event triggered the condition."
 }}"""
 
         try:
