@@ -4,6 +4,7 @@ import hashlib
 import json
 import logging
 import os
+import time
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from typing import Any
@@ -109,6 +110,9 @@ class NewsChecker(BaseChecker):
         filtered = []
         checked = 0
 
+        # Rate limit: 1.5s between API calls keeps us under 50/minute
+        api_delay = 1.5
+
         for article in articles:
             checked += 1
             try:
@@ -129,6 +133,10 @@ class NewsChecker(BaseChecker):
                     if stop_on_first:
                         logger.info(f"Agentic filter: found match after checking {checked} articles (stop_on_first=True)")
                         return filtered
+
+                # Rate limit delay between API calls
+                if checked < len(articles):
+                    time.sleep(api_delay)
 
             except Exception as e:
                 logger.warning(f"Error filtering article: {e}")
