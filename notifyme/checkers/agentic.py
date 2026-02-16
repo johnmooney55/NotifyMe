@@ -45,10 +45,15 @@ class AgenticChecker(BaseChecker):
         # Ask Claude to evaluate
         evaluation = self._evaluate_with_claude(content, monitor.condition, monitor.url)
 
+        # Normalize details to dict
+        relevant_details = evaluation.get("relevant_details", {})
+        if isinstance(relevant_details, str):
+            relevant_details = {"info": relevant_details} if relevant_details else {}
+
         return CheckResult(
             condition_met=evaluation.get("condition_met", False),
             explanation=evaluation.get("explanation", "No explanation provided"),
-            details=evaluation.get("relevant_details", {}),
+            details=relevant_details,
             state_hash=result.content_hash,
         )
 

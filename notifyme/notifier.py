@@ -65,13 +65,16 @@ class EmailNotifier:
         else:
             self._send_email(subject, body)
 
+        # Ensure details is a dict
+        result_details = result.details if isinstance(result.details, dict) else {}
+
         return NotificationLog(
             monitor_id=monitor.id,
             message=result.explanation,
             details={
                 "subject": subject,
                 "dry_run": dry_run,
-                **result.details,
+                **result_details,
             },
         )
 
@@ -90,8 +93,11 @@ class EmailNotifier:
         if result.details:
             lines.append("")
             lines.append("Details:")
-            for key, value in result.details.items():
-                lines.append(f"  {key}: {value}")
+            if isinstance(result.details, dict):
+                for key, value in result.details.items():
+                    lines.append(f"  {key}: {value}")
+            else:
+                lines.append(f"  {result.details}")
 
         # Special handling for news monitors
         if result.new_items:
