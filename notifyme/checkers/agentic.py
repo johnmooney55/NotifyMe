@@ -158,7 +158,7 @@ WEBPAGE CONTENT:
 IMPORTANT: Set "condition_met" to true ONLY if the condition is satisfied. If the condition is NOT met, set it to false.
 
 Respond with JSON only:
-{{"condition_met": true or false, "explanation": "why condition is met or not met", "relevant_details": "key info like scores, dates, prices", "event_id": "unique identifier like game date + opponent"}}"""
+{{"condition_met": true or false, "explanation": "why condition is met or not met", "relevant_details": "key info like scores, dates, prices", "event_id": "YYYY-MM-DD_opponent (e.g., 2025-02-15_Oregon) - must be consistent format for deduplication"}}"""
 
         try:
             response = self.client.messages.create(
