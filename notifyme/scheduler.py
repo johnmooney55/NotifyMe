@@ -79,7 +79,7 @@ class CheckOrchestrator:
 
             # Update monitor state
             monitor.last_checked = datetime.now()
-            monitor.last_state = checker.get_state_for_storage(result)
+            monitor.last_state = checker.get_state_for_storage(result, monitor)
             monitor.last_state_hash = result.state_hash
             self.db.update_monitor(monitor)
 

@@ -195,10 +195,10 @@ Answer with JSON only: {{"matches": true or false, "reason": "brief explanation"
         """Notify whenever there are new articles."""
         return len(result.new_items) > 0
 
-    def get_state_for_storage(self, result: CheckResult) -> dict[str, Any]:
+    def get_state_for_storage(self, result: CheckResult, monitor: Monitor) -> dict[str, Any]:
         """Store seen article IDs."""
         # Merge new IDs with existing ones
-        existing_ids = []
+        existing_ids = monitor.last_state.get("seen_ids", [])
         new_ids = [item["id"] for item in result.new_items]
 
         # Keep last 500 IDs to prevent unbounded growth

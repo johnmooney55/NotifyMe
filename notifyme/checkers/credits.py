@@ -119,7 +119,7 @@ class CreditsChecker(BaseChecker):
 
         return False
 
-    def get_state_for_storage(self, result: CheckResult) -> dict[str, Any]:
+    def get_state_for_storage(self, result: CheckResult, monitor: Monitor) -> dict[str, Any]:
         """Store balance and threshold state."""
         return {
             "condition_met": result.condition_met,

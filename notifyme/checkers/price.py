@@ -89,7 +89,7 @@ class PriceChecker(BaseChecker):
         previous_below = monitor.last_state.get("below_threshold", False)
         return not previous_below  # Only notify on transition to below
 
-    def get_state_for_storage(self, result: CheckResult) -> dict[str, Any]:
+    def get_state_for_storage(self, result: CheckResult, monitor: Monitor) -> dict[str, Any]:
         """Store price and threshold status."""
         return {
             "condition_met": result.condition_met,

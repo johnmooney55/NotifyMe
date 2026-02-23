@@ -65,7 +65,7 @@ class WebpageChecker(BaseChecker):
         previous_hash = monitor.last_state.get("hash")
         return previous_hash is not None and result.condition_met
 
-    def get_state_for_storage(self, result: CheckResult) -> dict[str, Any]:
+    def get_state_for_storage(self, result: CheckResult, monitor: Monitor) -> dict[str, Any]:
         """Store the content hash."""
         return {
             "condition_met": result.condition_met,

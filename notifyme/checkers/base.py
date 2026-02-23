@@ -39,12 +39,13 @@ class BaseChecker(ABC):
         previous_met = monitor.last_state.get("condition_met", False)
         return result.condition_met and not previous_met
 
-    def get_state_for_storage(self, result: CheckResult) -> dict[str, Any]:
+    def get_state_for_storage(self, result: CheckResult, monitor: Monitor) -> dict[str, Any]:
         """
         Get the state to store after checking.
 
         Args:
             result: The check result
+            monitor: The monitor (for accessing existing state)
 
         Returns:
             Dictionary to store as last_state

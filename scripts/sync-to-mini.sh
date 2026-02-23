@@ -5,7 +5,7 @@
 #
 # Auto-detects local network vs remote (DDNS)
 
-LOCAL_IP="192.168.4.108"
+LOCAL_IP="192.168.4.119"
 DDNS_HOST="housemooney.ddns.net"
 DDNS_PORT="2222"
 REMOTE_USER="johnmooney"

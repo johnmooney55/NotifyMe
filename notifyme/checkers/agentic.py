@@ -115,7 +115,7 @@ class AgenticChecker(BaseChecker):
             previous_met = monitor.last_state.get("condition_met", False)
             return not previous_met
 
-    def get_state_for_storage(self, result: CheckResult) -> dict[str, Any]:
+    def get_state_for_storage(self, result: CheckResult, monitor: Monitor) -> dict[str, Any]:
         """Store state including event tracking for notify_on_each mode."""
         state = {
             "condition_met": result.condition_met,
