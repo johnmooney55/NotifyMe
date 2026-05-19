@@ -1,5 +1,6 @@
 """Email notification system."""
 
+import html
 import logging
 import os
 import smtplib
@@ -77,6 +78,200 @@ class EmailNotifier:
                 **result_details,
             },
         )
+
+    def send_check_failure(
+        self,
+        monitor: Monitor,
+        error: Exception | str,
+        consecutive_failures: int,
+        first_failure_at: str,
+        dry_run: bool = False,
+    ) -> NotificationLog:
+        """
+        Send an alert that a monitor's check could not be completed.
+
+        Used when the check itself errors out (timeout, connection refused,
+        DNS failure, etc.) rather than the monitored condition being met.
+        """
+        subject = f"[NotifyMe] ⚠️ Check failing: {monitor.name}"
+        error_text = str(error).strip()
+        message = (
+            "NotifyMe could not complete this check. The target may be down, "
+            "unreachable, or blocking automated requests, so the monitor's "
+            "condition could not be evaluated."
+        )
+        meta = [
+            ("Type", monitor.type.value),
+            ("URL", monitor.url),
+            ("First failure", first_failure_at),
+            ("Consecutive failures", str(consecutive_failures)),
+        ]
+
+        self._send_status_notification(
+            subject=subject,
+            heading=monitor.name,
+            status_text="CHECK FAILED",
+            status_color="#dc3545",
+            message=message,
+            meta=meta,
+            error_text=error_text,
+            dry_run=dry_run,
+        )
+
+        return NotificationLog(
+            monitor_id=monitor.id,
+            message=f"Check failed: {error_text[:200]}",
+            details={
+                "subject": subject,
+                "dry_run": dry_run,
+                "kind": "check_failure",
+                "consecutive_failures": consecutive_failures,
+                "first_failure_at": first_failure_at,
+            },
+        )
+
+    def send_recovery(
+        self,
+        monitor: Monitor,
+        failed_checks: int,
+        dry_run: bool = False,
+    ) -> NotificationLog:
+        """Send an alert that a previously failing monitor can be reached again."""
+        subject = f"[NotifyMe] ✅ Recovered: {monitor.name}"
+        message = (
+            f"This monitor is reachable again after {failed_checks} failed "
+            "check(s). Normal condition evaluation has resumed."
+        )
+        meta = [
+            ("Type", monitor.type.value),
+            ("URL", monitor.url),
+            ("Failed checks before recovery", str(failed_checks)),
+        ]
+
+        self._send_status_notification(
+            subject=subject,
+            heading=monitor.name,
+            status_text="RECOVERED",
+            status_color="#28a745",
+            message=message,
+            meta=meta,
+            error_text=None,
+            dry_run=dry_run,
+        )
+
+        return NotificationLog(
+            monitor_id=monitor.id,
+            message=f"Recovered after {failed_checks} failed check(s)",
+            details={
+                "subject": subject,
+                "dry_run": dry_run,
+                "kind": "recovery",
+                "failed_checks": failed_checks,
+            },
+        )
+
+    def _send_status_notification(
+        self,
+        subject: str,
+        heading: str,
+        status_text: str,
+        status_color: str,
+        message: str,
+        meta: list[tuple[str, str]],
+        error_text: str | None,
+        dry_run: bool,
+    ) -> None:
+        """Build and send a simple status email (check failure / recovery)."""
+        html_body = self._format_status_html(
+            heading, status_text, status_color, message, meta, error_text
+        )
+        text_body = self._format_status_text(
+            heading, status_text, message, meta, error_text
+        )
+
+        if dry_run:
+            logger.info(
+                f"[DRY RUN] Would send email:\n  To: {self.notify_email}\n  Subject: {subject}"
+            )
+            logger.info(f"  Body:\n{text_body}")
+        else:
+            self._send_email(subject, html_body, text_body)
+
+    def _format_status_html(
+        self,
+        heading: str,
+        status_text: str,
+        status_color: str,
+        message: str,
+        meta: list[tuple[str, str]],
+        error_text: str | None,
+    ) -> str:
+        """Format a status email body as HTML."""
+        meta_rows = "".join(
+            f"<li><strong>{html.escape(key)}:</strong> {html.escape(value)}</li>"
+            for key, value in meta
+        )
+        error_block = ""
+        if error_text:
+            error_block = f"""
+    <div class="error">
+        <strong>Error detail:</strong>
+        <pre>{html.escape(error_text)}</pre>
+    </div>"""
+
+        return f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.5; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .header {{ background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; }}
+        .header h2 {{ margin: 0 0 10px 0; color: #333; }}
+        .status {{ display: inline-block; padding: 4px 12px; border-radius: 4px; color: white; background: {status_color}; font-weight: 500; font-size: 14px; }}
+        .message {{ background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid {status_color}; }}
+        .meta ul {{ padding-left: 20px; color: #555; font-size: 14px; }}
+        .error {{ margin-top: 20px; }}
+        .error pre {{ background: #f8f9fa; padding: 12px; border-radius: 8px; font-size: 12px; white-space: pre-wrap; word-break: break-word; }}
+        .footer {{ margin-top: 30px; padding-top: 20px; border-top: 1px solid #e9ecef; color: #999; font-size: 12px; }}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>{html.escape(heading)}</h2>
+        <span class="status">{html.escape(status_text)}</span>
+    </div>
+
+    <div class="message">{html.escape(message)}</div>
+
+    <div class="meta"><ul>{meta_rows}</ul></div>{error_block}
+
+    <div class="footer">
+        Sent by NotifyMe
+    </div>
+</body>
+</html>
+"""
+
+    def _format_status_text(
+        self,
+        heading: str,
+        status_text: str,
+        message: str,
+        meta: list[tuple[str, str]],
+        error_text: str | None,
+    ) -> str:
+        """Format a status email body as plain text."""
+        lines = [heading, f"Status: {status_text}", "", message, ""]
+        for key, value in meta:
+            lines.append(f"  {key}: {value}")
+        if error_text:
+            lines.append("")
+            lines.append("Error detail:")
+            lines.append(error_text)
+        lines.append("")
+        lines.append("-" * 40)
+        lines.append("Sent by NotifyMe")
+        return "\n".join(lines)
 
     def _format_html_body(self, monitor: Monitor, result: CheckResult) -> str:
         """Format email body as HTML."""
