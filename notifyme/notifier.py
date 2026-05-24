@@ -409,6 +409,36 @@ class EmailNotifier:
 
         return "\n".join(lines)
 
+    def send_admin_alert(self, *, subject: str, body: str) -> bool:
+        """Send a freeform infrastructure-level email — NOT bound to a
+        monitor or check result.
+
+        Used by `rate_limit_alerts` in both this app and TaskMe (which
+        imports `EmailNotifier` directly). The two-channel design means
+        rate-limit alerts and monitor-check alerts both go through the
+        same SMTP path and end up at the same `NOTIFY_EMAIL` inbox.
+
+        Returns True on success, False when SMTP isn't configured (a
+        warning is logged). Catches SMTP errors so the caller — usually
+        a rate-limit handler that's about to re-raise — doesn't have
+        to wrap this in another try/except.
+        """
+        if not self.smtp_user or not self.smtp_password or not self.notify_email:
+            logger.warning(
+                f"send_admin_alert: SMTP not configured; dropping '{subject}'"
+            )
+            return False
+        try:
+            html_body = (
+                f"<pre style=\"font-family:monospace;font-size:13px\">"
+                f"{html.escape(body)}</pre>"
+            )
+            self._send_email(subject, html_body, body)
+            return True
+        except Exception:
+            logger.exception(f"send_admin_alert failed: {subject}")
+            return False
+
     def _send_email(self, subject: str, html_body: str, text_body: str) -> None:
         """Send email via SMTP with HTML and plain text versions."""
         if not self.smtp_user or not self.smtp_password or not self.notify_email:

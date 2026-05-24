@@ -23,6 +23,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from anthropic import RateLimitError
+
 logger = logging.getLogger("notifyme.api_usage")
 
 DB_PATH = Path.home() / ".notifyme" / "api_usage.db"
@@ -60,14 +62,23 @@ CREATE INDEX IF NOT EXISTS idx_api_calls_feature ON api_calls(feature);
 
 
 def tracked_create(client, *, feature: str, **kwargs):
-    """Drop-in for ``client.messages.create(...)`` that records usage."""
-    response = client.messages.create(**kwargs)
+    """Drop-in for ``client.messages.create(...)`` that records usage.
+
+    `RateLimitError` is detected here: record + (dedup'd) email alert,
+    then re-raise so existing per-caller handling runs unchanged.
+    """
+    model = kwargs.get("model", "unknown")
     try:
-        _record(
-            feature=feature,
-            model=kwargs.get("model", "unknown"),
-            response=response,
+        response = client.messages.create(**kwargs)
+    except RateLimitError as e:
+        from notifyme.rate_limit_alerts import record_and_maybe_alert
+        record_and_maybe_alert(
+            app="notifyme", model=model, feature=feature,
+            error_message=str(e),
         )
+        raise
+    try:
+        _record(feature=feature, model=model, response=response)
     except Exception:
         logger.exception("Failed to record API usage; continuing")
     return response
