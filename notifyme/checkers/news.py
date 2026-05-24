@@ -11,6 +11,8 @@ from typing import Any
 
 from anthropic import Anthropic
 
+from notifyme.api_usage import tracked_create
+
 from ..fetcher import fetch_rss, fetch_url
 from ..models import CheckResult, Monitor
 from .base import BaseChecker
@@ -165,7 +167,9 @@ ARTICLE CONTENT:
 Answer with JSON only: {{"matches": true or false, "reason": "brief explanation"}}"""
 
         try:
-            response = self.client.messages.create(
+            response = tracked_create(
+                self.client,
+                feature="news_filter",
                 model="claude-3-haiku-20240307",  # Use Haiku for filtering (cheaper)
                 max_tokens=100,
                 messages=[{"role": "user", "content": prompt}],

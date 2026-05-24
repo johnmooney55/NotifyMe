@@ -8,6 +8,8 @@ from typing import Any
 
 from anthropic import Anthropic
 
+from notifyme.api_usage import tracked_create
+
 from ..fetcher import fetch_url
 from ..models import CheckResult, Monitor
 from .base import BaseChecker
@@ -161,7 +163,9 @@ Respond with JSON only:
 {{"condition_met": true or false, "explanation": "why condition is met or not met", "relevant_details": "key info like scores, dates, prices", "event_id": "YYYY-MM-DD_opponent (e.g., 2025-02-15_Oregon) - must be consistent format for deduplication"}}"""
 
         try:
-            response = self.client.messages.create(
+            response = tracked_create(
+                self.client,
+                feature="agentic_check",
                 model="claude-sonnet-4-20250514",
                 max_tokens=300,
                 messages=[{"role": "user", "content": prompt}],
