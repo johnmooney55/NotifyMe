@@ -170,7 +170,11 @@ Answer with JSON only: {{"matches": true or false, "reason": "brief explanation"
             response = tracked_create(
                 self.client,
                 feature="news_filter",
-                model="claude-3-haiku-20240307",  # Use Haiku for filtering (cheaper)
+                # Haiku 3 (claude-3-haiku-20240307) was retired by
+                # Anthropic. Haiku 4.5 is the current cheapest model
+                # and is more than capable for per-article topic+intent
+                # classification.
+                model="claude-haiku-4-5-20251001",
                 max_tokens=100,
                 messages=[{"role": "user", "content": prompt}],
             )
