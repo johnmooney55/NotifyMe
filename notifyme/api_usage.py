@@ -35,8 +35,11 @@ MODEL_PRICES: dict[str, tuple[float, float]] = {
     "claude-opus-4-7":                 (15.0, 75.0),
     "claude-sonnet-4-6":               (3.0,  15.0),
     "claude-haiku-4-5-20251001":       (1.0,  5.0),
-    "claude-sonnet-4-20250514":        (3.0,  15.0),
-    "claude-3-haiku-20240307":         (0.25, 1.25),
+    # Historical-only rows below — TaskMe's weekly_maintenance check
+    # skips lines tagged with the marker below when scanning for
+    # deprecated model literals.
+    "claude-sonnet-4-20250514":        (3.0,  15.0),   # maintenance:ignore-model
+    "claude-3-haiku-20240307":         (0.25, 1.25),   # maintenance:ignore-model
 }
 
 WEB_SEARCH_COST_PER_THOUSAND = 10.0
