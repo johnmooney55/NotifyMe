@@ -213,9 +213,11 @@ def _fetch_with_browser_use(
     logger.info(f"Browser-Use: fetching {url} (headed={headed})")
 
     async def run_agent():
-        # Use browser-use's ChatAnthropic wrapper
+        # Use browser-use's ChatAnthropic wrapper. Current Sonnet 4.6
+        # alias rather than the May-2025 snapshot for the same reason
+        # as the agentic checker — deprecation defense + better quality.
         llm = ChatAnthropic(
-            model="claude-sonnet-4-20250514",
+            model="claude-sonnet-4-6",
         )
 
         browser = Browser(headless=not headed)

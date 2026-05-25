@@ -166,7 +166,12 @@ Respond with JSON only:
             response = tracked_create(
                 self.client,
                 feature="agentic_check",
-                model="claude-sonnet-4-20250514",
+                # Use the current Sonnet 4.6 alias. The previous pin to
+                # the May-2025 snapshot (claude-sonnet-4-20250514) still
+                # works but is a deprecation risk, and 4.6 is meaningfully
+                # better at nuanced conditions like our newer monitors
+                # (TELO, FY27 ALNAV).
+                model="claude-sonnet-4-6",
                 max_tokens=300,
                 messages=[{"role": "user", "content": prompt}],
             )
