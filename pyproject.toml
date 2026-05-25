@@ -7,6 +7,7 @@ requires-python = ">=3.10"
 dependencies = [
     "anthropic>=0.40.0",
     "requests>=2.31.0",
+    "curl_cffi>=0.7",            # browser-impersonating HTTP for Akamai/CF
     "beautifulsoup4>=4.12.0",
     "feedparser>=6.0.0",
     "click>=8.1.0",

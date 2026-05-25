@@ -9,13 +9,37 @@ from dataclasses import dataclass
 import requests
 from bs4 import BeautifulSoup
 
+# Prefer curl_cffi for the requests path — it ships with browser-matched
+# TLS fingerprints (JA3) so Akamai/Cloudflare-protected sites that
+# 403 plain Python `requests` work. Falls back gracefully if not
+# installed. www.mynavyhr.navy.mil was the case that forced this.
+try:
+    from curl_cffi import requests as _impersonating_requests
+    _CURL_CFFI_AVAILABLE = True
+except ImportError:
+    _impersonating_requests = None
+    _CURL_CFFI_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
 
-# Default headers to mimic a browser
+# Default headers — mimic a real desktop Chrome navigation. The minimal
+# {User-Agent, Accept, Accept-Language} set used to be enough, but a
+# growing number of hardened servers (Akamai-fronted .mil/.gov sites,
+# Cloudflare-protected pages) inspect the `Sec-Fetch-*` and
+# `Upgrade-Insecure-Requests` headers and 403 anything that "doesn't
+# look like a browser navigation". www.mynavyhr.navy.mil was the case
+# that forced this expansion — a plain Mozilla UA returned 403; only
+# the full header set returns the actual page.
 DEFAULT_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-    "Accept-Language": "en-US,en;q=0.5",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-User": "?1",
+    "Upgrade-Insecure-Requests": "1",
 }
 
 
@@ -84,10 +108,26 @@ def fetch_url(
 def _fetch_with_requests(
     url: str, timeout: int, headers: dict | None
 ) -> FetchResult:
-    """Fetch URL using requests library."""
+    """Fetch URL using the HTTP requests path.
+
+    Uses curl_cffi (with Chrome TLS impersonation) when available; falls
+    back to plain `requests` otherwise. Akamai/Cloudflare-protected
+    sites inspect TLS fingerprints below the header layer and 403
+    plain Python `requests`; libcurl's TLS stack matches real Chrome
+    closely enough that the impersonating path gets through.
+    """
     merged_headers = {**DEFAULT_HEADERS, **(headers or {})}
 
-    response = requests.get(url, headers=merged_headers, timeout=timeout)
+    if _CURL_CFFI_AVAILABLE:
+        # impersonate="chrome124" sets the TLS fingerprint, HTTP/2
+        # frame ordering, and a few other client characteristics to
+        # match Chrome 124's defaults.
+        response = _impersonating_requests.get(
+            url, headers=merged_headers, timeout=timeout,
+            impersonate="chrome124",
+        )
+    else:
+        response = requests.get(url, headers=merged_headers, timeout=timeout)
     response.raise_for_status()
 
     html = response.text
