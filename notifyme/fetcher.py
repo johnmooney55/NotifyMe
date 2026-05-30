@@ -165,7 +165,16 @@ def _fetch_with_playwright(url: str, timeout: int) -> FetchResult:
         page = browser.new_page()
         page.set_extra_http_headers(DEFAULT_HEADERS)
 
-        response = page.goto(url, timeout=timeout * 1000, wait_until="networkidle")
+        # `wait_until="networkidle"` (the Playwright default we used to
+        # set) waits for 500ms of zero network activity. Modern pages
+        # with analytics, polling, websockets, or long-poll keepalives
+        # never reach that state and the goto times out at 30s — a
+        # false-positive "site down" for monitors. `domcontentloaded`
+        # waits only for the DOM to be parsed, which is enough for
+        # is-the-site-up checks and content extraction. Confirmed
+        # against bennett.mooney.me on 2026-05-29 — the timeout was
+        # the wait condition, not the site.
+        response = page.goto(url, timeout=timeout * 1000, wait_until="domcontentloaded")
         html = page.content()
 
         browser.close()
