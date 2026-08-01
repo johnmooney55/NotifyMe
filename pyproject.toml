@@ -10,7 +10,8 @@ dependencies = [
     "curl_cffi>=0.7",            # browser-impersonating HTTP for Akamai/CF
     "beautifulsoup4>=4.12.0",
     "feedparser>=6.0.0",
-    "click>=8.1.0",
+    "click>=8.3.3",              # PYSEC-2026-2132
+    "soupsieve>=2.8.4",          # CVE-2026-49477/49476 (bs4 transitive)
     "python-dotenv>=1.0.0",
 ]
 
