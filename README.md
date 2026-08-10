@@ -7,6 +7,7 @@ An agentic monitoring and notification system that watches for changes and alert
 - **Agentic Monitors** - Use Claude to evaluate natural language conditions against web pages
 - **News Monitors** - Track Google News/RSS feeds with optional AI filtering
 - **Hybrid Monitors** - Combine news feeds with agentic filtering to reduce false positives
+- **Finance Center Monitors** - Alert on expiring credits and card benefits from the Finance Center server
 - **Smart Notifications** - Only notifies on state changes, not repeated checks
 - **Background Scheduling** - Runs automatically via macOS launchd
 
@@ -53,6 +54,9 @@ ANTHROPIC_CONSOLE_EMAIL=your-console-email@example.com
 IMAP_HOST=imap.gmail.com
 IMAP_USER=your-email@gmail.com
 IMAP_PASSWORD=your-gmail-app-password  # Same as SMTP or separate app password
+
+# Required for the finance_center monitor (expiring credits/benefits)
+FINANCE_CENTER_TOKEN=  # FC_API_TOKEN from ~/finance-center/server/.env on the mini
 ```
 
 ## Quick Start
@@ -134,6 +138,32 @@ notifyme add \
 - Set `IMAP_HOST`, `IMAP_USER`, `IMAP_PASSWORD` in `.env` for email access
 - Uses magic link authentication (retrieves login link from email automatically)
 - Automatically archives magic link emails after use
+
+### Finance Center Monitor (expiring credits & benefits)
+Alerts when an airline credit, gift card, store credit or Amex benefit is about
+to expire. Finance Center runs on the Mac mini and answers the question; this
+sends the email.
+
+```bash
+notifyme add \
+  --name "Finance Center credits" \
+  --type finance_center \
+  --interval 720  # twice a day
+```
+
+**Requirements:**
+- Set `FINANCE_CENTER_TOKEN` in `.env` (it is `FC_API_TOKEN` from
+  `~/finance-center/server/.env`)
+- Finance Center's server must be running; the monitor defaults to
+  `http://127.0.0.1:8081`, i.e. loopback on the mini
+
+**Config options** (via the monitor's `config`):
+- `critical_only` — only alert on items already critical
+- `categories` — restrict to e.g. `["airline", "gift_card"]`
+
+**Notification behaviour:** state is keyed on `{item id}:{status}`, so a credit
+expiring in three weeks does not generate a daily email as the countdown ticks
+down — but an item escalating from warning to critical does alert again.
 
 ### Options
 
