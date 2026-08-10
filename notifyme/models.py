@@ -16,6 +16,7 @@ class MonitorType(str, Enum):
     AGENTIC = "agentic"
     NEWS = "news"
     CREDITS = "credits"
+    FINANCE_CENTER = "finance_center"
 
 
 @dataclass

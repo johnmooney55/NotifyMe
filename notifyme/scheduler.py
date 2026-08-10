@@ -4,7 +4,14 @@ import logging
 from datetime import datetime, timedelta
 from typing import Callable
 
-from .checkers import AgenticChecker, CreditsChecker, NewsChecker, PriceChecker, WebpageChecker
+from .checkers import (
+    AgenticChecker,
+    CreditsChecker,
+    FinanceCenterChecker,
+    NewsChecker,
+    PriceChecker,
+    WebpageChecker,
+)
 from .checkers.base import BaseChecker
 from .database import Database
 from .models import CheckResult, Monitor, MonitorType
@@ -21,6 +28,7 @@ CHECKER_MAP: dict[MonitorType, type[BaseChecker]] = {
     MonitorType.WEBPAGE: WebpageChecker,
     MonitorType.PRICE: PriceChecker,
     MonitorType.RSS: NewsChecker,  # RSS uses same checker as news
+    MonitorType.FINANCE_CENTER: FinanceCenterChecker,
 }
 
 

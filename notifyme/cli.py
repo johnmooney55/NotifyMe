@@ -43,7 +43,7 @@ def cli(ctx: click.Context, db_path: str | None, verbose: bool) -> None:
 @click.option(
     "--type", "-t", "monitor_type",
     required=True,
-    type=click.Choice(["agentic", "news", "webpage", "price", "rss", "api", "credits"]),
+    type=click.Choice(["agentic", "news", "webpage", "price", "rss", "api", "credits", "finance_center"]),
     help="Monitor type",
 )
 @click.option("--url", "-u", required=False, help="URL to monitor (not required for credits type)")
@@ -99,6 +99,10 @@ def add(
         # Default threshold to $1.00 if not specified
         if threshold is None:
             threshold = 1.00
+    elif mtype == MonitorType.FINANCE_CENTER:
+        # Finance Center's API is on this machine; loopback is the sane default
+        # and keeps the check working even if the tailnet layer is what broke.
+        url = url or "http://127.0.0.1:8081"
     elif not url:
         raise click.ClickException(f"{monitor_type} monitors require --url")
 
