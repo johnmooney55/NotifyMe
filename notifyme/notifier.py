@@ -289,7 +289,7 @@ class EmailNotifier:
         .status {{ display: inline-block; padding: 4px 12px; border-radius: 4px; color: white; background: {status_color}; font-weight: 500; font-size: 14px; }}
         .meta {{ color: #666; font-size: 14px; margin-top: 10px; }}
         .meta a {{ color: #0066cc; }}
-        .explanation {{ background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid {status_color}; }}
+        .explanation {{ background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid {status_color}; white-space: pre-line; }}
         .articles {{ margin-top: 20px; }}
         .article {{ background: #fff; border: 1px solid #e9ecef; border-radius: 8px; padding: 15px; margin-bottom: 12px; }}
         .article-title {{ font-weight: 600; color: #333; text-decoration: none; font-size: 15px; }}
