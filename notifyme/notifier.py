@@ -16,6 +16,21 @@ logger = logging.getLogger(__name__)
 # Load environment variables
 load_dotenv()
 
+# Details keys that exist for dedupe bookkeeping, not for the reader. Anything
+# starting with "_" is a payload a checker carries through to
+# get_state_for_storage (finance_center's "_fresh", for one) and would render
+# as a wall of raw dicts in the email.
+INTERNAL_DETAIL_KEYS = ("event_id", "event_ids", "feed_title")
+
+
+def visible_details(details: dict) -> dict:
+    """Drop bookkeeping keys so only reader-facing values reach the email."""
+    return {
+        k: v
+        for k, v in details.items()
+        if v and not k.startswith("_") and k not in INTERNAL_DETAIL_KEYS
+    }
+
 
 class EmailNotifier:
     """Send email notifications via SMTP."""
@@ -316,8 +331,7 @@ class EmailNotifier:
 
         # Add details if present (for agentic monitors)
         if result.details and isinstance(result.details, dict):
-            details_to_show = {k: v for k, v in result.details.items()
-                            if k not in ('event_id', 'feed_title') and v}
+            details_to_show = visible_details(result.details)
             if details_to_show:
                 html += '<div class="details"><strong>Details:</strong><ul>'
                 for key, value in details_to_show.items():
@@ -374,8 +388,7 @@ class EmailNotifier:
         ]
 
         if result.details and isinstance(result.details, dict):
-            details_to_show = {k: v for k, v in result.details.items()
-                            if k not in ('event_id', 'feed_title') and v}
+            details_to_show = visible_details(result.details)
             if details_to_show:
                 lines.append("")
                 lines.append("Details:")

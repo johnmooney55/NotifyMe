@@ -120,3 +120,16 @@ class TestFinanceCenterChecker:
         with respond([item(days=-2)]):
             result = checker.check(monitor())
         assert "expired" in result.explanation
+
+    def test_internal_payload_stays_out_of_the_email(self, checker):
+        """_fresh is dedupe bookkeeping; rendering it dumps raw dicts at the reader."""
+        from notifyme.notifier import visible_details
+
+        with respond([item(id_="c1")]):
+            result = checker.check(monitor())
+
+        assert result.details["_fresh"], "checker still needs the payload internally"
+        shown = visible_details(result.details)
+        assert "_fresh" not in shown
+        assert "event_ids" not in shown
+        assert shown == {"total_matching": 1, "new": 1}
