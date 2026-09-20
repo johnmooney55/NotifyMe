@@ -8,6 +8,8 @@ from .checkers import (
     AgenticChecker,
     CreditsChecker,
     FinanceCenterChecker,
+    PenFedChecker,
+    ConnectionChecker,
     NewsChecker,
     PriceChecker,
     WebpageChecker,
@@ -29,6 +31,8 @@ CHECKER_MAP: dict[MonitorType, type[BaseChecker]] = {
     MonitorType.PRICE: PriceChecker,
     MonitorType.RSS: NewsChecker,  # RSS uses same checker as news
     MonitorType.FINANCE_CENTER: FinanceCenterChecker,
+    MonitorType.PENFED: PenFedChecker,
+    MonitorType.CONNECTION: ConnectionChecker,
 }
 
 

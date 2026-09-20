@@ -43,7 +43,7 @@ def cli(ctx: click.Context, db_path: str | None, verbose: bool) -> None:
 @click.option(
     "--type", "-t", "monitor_type",
     required=True,
-    type=click.Choice(["agentic", "news", "webpage", "price", "rss", "api", "credits", "finance_center"]),
+    type=click.Choice(["agentic", "news", "webpage", "price", "rss", "api", "credits", "finance_center", "penfed", "connection"]),
     help="Monitor type",
 )
 @click.option("--url", "-u", required=False, help="URL to monitor (not required for credits type)")
