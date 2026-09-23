@@ -105,6 +105,30 @@ class ConnectionChecker(BaseChecker):
     def _day(timestamp: str | None) -> str:
         return (timestamp or "never")[:10]
 
+    @staticmethod
+    def _local(timestamp: str | None) -> str:
+        """A SQLite UTC timestamp, as local time, with the zone named.
+
+        Finance Center stores UTC and says so nowhere in the string, so these
+        headlines used to print it raw. A mail that arrived at 04:17 EDT read
+        "since 2026-09-23 06:35:33" and was taken for a report about the 06:30
+        job — it was 02:35 local, four hours earlier and a different event
+        entirely. Every other timestamp a person sees from this machine is
+        local, so this one is too.
+
+        Deliberately NOT used in event ids. Those hang off `_day` and are the
+        de-duplication keys; shifting them by a timezone would re-mail every
+        outage already reported.
+        """
+        if not timestamp:
+            return "ever"
+        try:
+            parsed = datetime.fromisoformat(f"{timestamp}+00:00")
+        except ValueError:
+            # Unparseable is still better shown than swallowed.
+            return timestamp
+        return parsed.astimezone().strftime("%Y-%m-%d %H:%M %Z")
+
     # ------------------------------------------------------------------ fetch
 
     def _fetch(self, monitor: Monitor) -> list[dict[str, Any]]:
@@ -160,7 +184,7 @@ class ConnectionChecker(BaseChecker):
                 "status": "critical",
                 "event_id": f"connection:{name}:silent:{self._day(last_run)}",
                 "headline": (
-                    f"{label} has not run at all since {last_run or 'ever'}."
+                    f"{label} has not run at all since {self._local(last_run)}."
                     " The scheduled job is not running — check launchd, not the connection."
                 ),
             })
@@ -176,7 +200,7 @@ class ConnectionChecker(BaseChecker):
                 "headline": (
                     f"{label} last run {last_status}"
                     f"{': ' + conn['lastRunError'] if conn.get('lastRunError') else ''}."
-                    f" Last success {last_success or 'never'}."
+                    f" Last success {self._local(last_success)}."
                 ),
             })
 
@@ -191,7 +215,7 @@ class ConnectionChecker(BaseChecker):
                 "status": status,
                 "event_id": f"connection:{name}:stale:{self._day(last_success)}:{status}",
                 "headline": (
-                    f"{label} has not imported successfully since {last_success or 'ever'}"
+                    f"{label} has not imported successfully since {self._local(last_success)}"
                     f"{f' ({success_age:.0f} days)' if success_age is not None else ''}."
                 ),
             })
@@ -212,7 +236,7 @@ class ConnectionChecker(BaseChecker):
                 "headline": (
                     f"{label} {signal.get('name')} is {signal.get('state')}"
                     f"{': ' + signal['detail'] if signal.get('detail') else ''}"
-                    f" (since {signal.get('since') or 'ever'})."
+                    f" (since {self._local(signal.get('since'))})."
                 ),
             })
 
@@ -229,7 +253,7 @@ class ConnectionChecker(BaseChecker):
                         f"{label} imported cleanly — day {day} of {confirm_days}"
                         f" since this connection was established."
                         f" Newest data {conn.get('newestData') or 'none'};"
-                        f" last run {last_success}."
+                        f" last run {self._local(last_success)}."
                     ),
                 })
 
