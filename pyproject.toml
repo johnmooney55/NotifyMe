@@ -13,6 +13,9 @@ dependencies = [
     "click>=8.3.3",              # PYSEC-2026-2132
     "soupsieve>=2.8.4",          # CVE-2026-49477/49476 (bs4 transitive)
     "anyio>=4.14.2",             # CVE-2026-63374/64847 (anthropic transitive)
+    "certifi>=2026.10.19",       # PYSEC-2026-4320 (requests/httpx transitive)
+    "filelock>=4.2.1",           # CVE-2026-112907/112913/112940
+    "msgpack>=1.2.3",            # CVE-2026-114613 (cachecontrol transitive)
     "python-dotenv>=1.0.0",
 ]
 
